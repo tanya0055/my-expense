@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกค่าใช้จ่าย</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f3f4f6; /* Gray 100 */
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+<div class="max-w-md mx-auto min-h-screen bg-white shadow-xl overflow-hidden relative">
+    
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-6 rounded-b-2xl shadow-md relative overflow-hidden">
+        <h1 class="text-2xl font-bold text-center">บันทึกกองกลางรายเดือน</h1>
+        <p class="text-blue-200 text-center text-sm mt-1">งบประมาณ 2,000 บาท/เดือน</p>
+        
+        <!-- Current Month Summary -->
+        <div class="mt-5 bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20">
+            <div class="flex justify-between items-center mb-3 border-b border-white/20 pb-2">
+                <h2 class="text-sm font-semibold text-blue-50 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span id="currentMonthLabel">เดือนปัจจุบัน</span>
+                </h2>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center divide-x divide-white/20">
+                <div>
+                    <p class="text-blue-200 text-xs mb-1">กองกลาง</p>
+                    <p class="text-lg font-bold">2,000</p>
+                </div>
+                <div>
+                    <p class="text-blue-200 text-xs mb-1">ใช้ไป</p>
+                    <p class="text-lg font-bold text-yellow-300" id="monthExpense">0</p>
+                </div>
+                <div>
+                    <p class="text-blue-200 text-xs mb-1">คงเหลือ</p>
+                    <p class="text-lg font-bold text-green-300" id="monthRemaining">2,000</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Summary Toggle -->
+        <div class="mt-3 bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20 flex justify-between items-center cursor-pointer hover:bg-white/20 transition-colors" onclick="window.toggleYearlyDetail()">
+            <div>
+                <p class="text-blue-200 text-xs mb-1">สรุปทั้งปี <span id="currentYearLabel"></span> (งบ 24,000 บาท)</p>
+                <div class="flex items-baseline">
+                    <span class="text-xl font-bold text-white" id="yearRemaining">24,000</span>
+                    <span class="ml-2 text-blue-200 text-sm">บาท (คงเหลือ)</span>
+                </div>
+            </div>
+            <div class="bg-white/20 p-1.5 rounded-full">
+                <svg id="yearlyToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Hidden Yearly Details (Dropdown) -->
+        <div id="yearlyDetailPanel" class="hidden mt-2 bg-white/95 text-gray-800 rounded-xl p-4 shadow-inner text-sm max-h-[60vh] overflow-y-auto transition-all">
+            <h3 class="font-bold text-gray-700 border-b pb-2 mb-2 flex items-center justify-between">
+                <span>รายละเอียดแต่ละเดือน</span>
+                <span class="text-xs font-normal text-gray-500">งบ 2,000/ด.</span>
+            </h3>
+            <div id="monthlyBreakdownList" class="space-y-1">
+                <!-- Items will be injected here via JavaScript -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="p-6 pb-24">
+        
+        <!-- Add Expense Form -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-8">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                เพิ่มรายการใหม่
+            </h2>
+            
+            <form id="expenseForm" class="space-y-4">
+                
+                <!-- Date Input -->
+                <div>
+                    <label for="date" class="block text-sm font-medium text-gray-600 mb-1">วันที่</label>
+                    <input type="date" id="date" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow">
+                </div>
+
+                <!-- Category Input -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-600 mb-1">หมวดหมู่</label>
+                        <select id="category" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white transition-shadow">
+                            <option value="ค่าน้ำ">ค่าน้ำ</option>
+                            <option value="ค่าไฟ">ค่าไฟ</option>
+                            <option value="ค่าโทรศัพท์/เน็ต">ค่าโทรศัพท์/เน็ต</option>
+                            <option value="ค่าเช่า/ผ่อนบ้าน">ค่าเช่า/ผ่อนบ้าน</option>
+                            <option value="อื่นๆ">อื่นๆ</option>
+                        </select>
+                    </div>
+
+                    <!-- Amount Input -->
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-600 mb-1">จำนวนเงิน (บาท)</label>
+                        <input type="number" id="amount" required min="0" step="0.01" placeholder="0.00" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow">
+                    </div>
+                </div>
+
+                <!-- Note Input -->
+                <div>
+                    <label for="note" class="block text-sm font-medium text-gray-600 mb-1">หมายเหตุ (ถ้ามี)</label>
+                    <input type="text" id="note" placeholder="เช่น บิลเดือน พ.ค." class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow">
+                </div>
+
+                <!-- Receipt Image Upload -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">แนบใบเสร็จ/สลิป (รูปภาพ)</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50 transition-colors relative cursor-pointer" onclick="document.getElementById('receiptImage').click()">
+                        <div class="space-y-1 text-center" id="uploadPlaceholder">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600 justify-center">
+                                <span class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                    <span>อัปโหลดรูปภาพ</span>
+                                    <input id="receiptImage" name="receiptImage" type="file" accept="image/*" class="sr-only">
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG, JPG สูงสุด 5MB</p>
+                        </div>
+                        <!-- Preview Container inside the upload box -->
+                        <div id="imagePreviewContainer" class="hidden absolute inset-0 rounded-lg overflow-hidden flex items-center justify-center bg-black/5">
+                            <img id="imagePreview" src="" alt="Preview" class="max-h-full max-w-full object-contain">
+                            <button type="button" id="removeImageBtn" class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 flex justify-center items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    บันทึกข้อมูล
+                </button>
+            </form>
+        </div>
+
+        <!-- History List -->
+        <div>
+            <h2 class="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                ประวัติรายการ
+            </h2>
+            
+            <!-- List Container -->
+            <div id="expenseList" class="space-y-3">
+                <!-- Items will be injected here via JavaScript -->
+                <div id="emptyState" class="text-center py-8 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <p>ยังไม่มีรายการบันทึก</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Modal for Viewing Image -->
+<div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div class="relative max-w-full max-h-full">
+        <button id="closeModalBtn" class="absolute -top-10 right-0 text-white hover:text-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <img id="modalImage" src="" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain">
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- State ---
+        let expenses = [];
+        let currentImageBase64 = null;
+
+        // --- DOM Elements ---
+        const form = document.getElementById('expenseForm');
+        const dateInput = document.getElementById('date');
+        const imageInput = document.getElementById('receiptImage');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        const expenseList = document.getElementById('expenseList');
+        const emptyState = document.getElementById('emptyState');
+        
+        // Modal Elements
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        // --- Initialize ---
+        // Set today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+
+        // Load data from LocalStorage if available (to keep data after refresh)
+        loadData();
+
+        // --- Event Listeners ---
+
+        // Handle Image Selection for Preview
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check if it's an image
+                if (!file.type.startsWith('image/')) {
+                    showMessage('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+                    this.value = ''; // Reset input
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImageBase64 = e.target.result;
+                    imagePreview.src = currentImageBase64;
+                    
+                    // Toggle UI
+                    uploadPlaceholder.classList.add('hidden');
+                    imagePreviewContainer.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle Remove Selected Image
+        removeImageBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent triggering the file input click
+            resetImageInput();
+        });
+
+        // Handle Form Submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const date = document.getElementById('date').value;
+            const category = document.getElementById('category').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const note = document.getElementById('note').value;
+
+            if (!date || !category || isNaN(amount)) {
+                showMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                return;
+            }
+
+            // Create expense object
+            const newExpense = {
+                id: Date.now().toString(),
+                date: date,
+                category: category,
+                amount: amount,
+                note: note,
+                image: currentImageBase64 // Store base64 image (In real app, upload to server and store URL)
+            };
+
+            // Add to state and save
+            expenses.push(newExpense);
+            saveData();
+            
+            // Update UI
+            renderExpenses();
+            updateDashboard();
+
+            // Reset form
+            form.reset();
+            dateInput.value = today; // reset date to today
+            resetImageInput();
+            
+            // Show success feedback
+            showMessage('บันทึกข้อมูลเรียบร้อยแล้ว', 'success');
+        });
+
+        // Modal Events
+        closeModalBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        // --- Functions ---
+
+        function resetImageInput() {
+            imageInput.value = '';
+            currentImageBase64 = null;
+            imagePreview.src = '';
+            uploadPlaceholder.classList.remove('hidden');
+            imagePreviewContainer.classList.add('hidden');
+        }
+
+        // Format Date string (YYYY-MM-DD to DD/MM/YYYY)
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            const date = new Date(dateString);
+            return date.toLocaleDateString('th-TH', options);
+        }
+
+        // Format Currency
+        function formatMoney(amount) {
+            return amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Render List of Expenses
+        function renderExpenses() {
+            // Sort by date (newest first)
+            const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // Clear list except empty state
+            expenseList.innerHTML = '';
+
+            if (sortedExpenses.length === 0) {
+                expenseList.appendChild(emptyState);
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            sortedExpenses.forEach(expense => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start justify-between group transition-all hover:shadow-md';
+                
+                // Get icon based on category
+                let iconSvg = '';
+                let bgColor = '';
+                switch(expense.category) {
+                    case 'ค่าน้ำ':
+                        iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />';
+                        bgColor = 'bg-blue-100 text-blue-600';
+                        break;
+                    case 'ค่าไฟ':
+                        iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />';
+                        bgColor = 'bg-yellow-100 text-yellow-600';
+                        break;
+                    case 'ค่าโทรศัพท์/เน็ต':
+                        iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />';
+                        bgColor = 'bg-green-100 text-green-600';
+                        break;
+                    default:
+                        iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />';
+                        bgColor = 'bg-purple-100 text-purple-600';
+                }
+
+                // Check if has image
+                const hasImage = expense.image !== null;
+                const imageIndicator = hasImage ? `
+                    <button type="button" onclick="window.viewImage('${expense.id}')" class="ml-2 text-gray-400 hover:text-blue-500 transition-colors" title="ดูรูปใบเสร็จ">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                ` : '';
+
+                itemEl.innerHTML = `
+                    <div class="flex items-center flex-1">
+                        <div class="h-10 w-10 rounded-full flex items-center justify-center mr-3 ${bgColor} shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                ${iconSvg}
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center">
+                                <p class="text-sm font-semibold text-gray-800 truncate">${expense.category}</p>
+                                ${imageIndicator}
+                            </div>
+                            <div class="flex items-center text-xs text-gray-500 mt-0.5">
+                                <span>${formatDate(expense.date)}</span>
+                                ${expense.note ? `<span class="mx-1">•</span><span class="truncate">${expense.note}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ml-4 flex items-center shrink-0">
+                        <span class="font-bold text-gray-800">${formatMoney(expense.amount)}</span>
+                        <button onclick="window.deleteExpense('${expense.id}')" class="ml-3 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="ลบรายการ">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                `;
+                expenseList.appendChild(itemEl);
+            });
+        }
+
+        // Update Dashboard Summary (Monthly & Yearly)
+        function updateDashboard() {
+            const MONTHLY_BUDGET = 2000;
+            const monthNames = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const shortMonthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+            
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonthIndex = today.getMonth(); // 0-11
+            
+            // Set Labels
+            document.getElementById('currentMonthLabel').textContent = `${monthNames[currentMonthIndex]} ${currentYear + 543}`;
+            document.getElementById('currentYearLabel').textContent = currentYear + 543;
+
+            let yearExpenseTotal = 0;
+            let monthlyData = Array(12).fill(0); // Array holding total expense for each month
+
+            // Calculate expenses from data
+            expenses.forEach(exp => {
+                const expDate = new Date(exp.date);
+                if (expDate.getFullYear() === currentYear) {
+                    const m = expDate.getMonth();
+                    monthlyData[m] += exp.amount;
+                    yearExpenseTotal += exp.amount;
+                }
+            });
+
+            // Update Current Month View
+            const currentMonthExpense = monthlyData[currentMonthIndex];
+            const currentMonthRemaining = MONTHLY_BUDGET - currentMonthExpense;
+            
+            document.getElementById('monthExpense').textContent = formatMoney(currentMonthExpense);
+            
+            const monthRemainEl = document.getElementById('monthRemaining');
+            monthRemainEl.textContent = formatMoney(currentMonthRemaining);
+            if (currentMonthRemaining < 0) {
+                monthRemainEl.className = "text-lg font-bold text-red-300";
+            } else {
+                monthRemainEl.className = "text-lg font-bold text-green-300";
+            }
+
+            // Update Yearly View
+            const yearBudget = MONTHLY_BUDGET * 12;
+            const yearRemaining = yearBudget - yearExpenseTotal;
+            
+            const yearRemainEl = document.getElementById('yearRemaining');
+            yearRemainEl.textContent = formatMoney(yearRemaining);
+            if (yearRemaining < 0) {
+                yearRemainEl.className = "text-xl font-bold text-red-300";
+            } else {
+                yearRemainEl.className = "text-xl font-bold text-white";
+            }
+
+            // Update Monthly Breakdown Details
+            const breakdownList = document.getElementById('monthlyBreakdownList');
+            breakdownList.innerHTML = '';
+            
+            monthlyData.forEach((amount, index) => {
+                const remain = MONTHLY_BUDGET - amount;
+                const remainColor = remain < 0 ? 'text-red-600 font-bold' : (remain === 2000 ? 'text-gray-400' : 'text-green-600 font-medium');
+                const rowBg = index === currentMonthIndex ? 'bg-blue-50 rounded-md' : '';
+                
+                const html = `
+                    <div class="flex justify-between items-center p-2 border-b border-gray-100 last:border-0 ${rowBg}">
+                        <span class="w-12 font-medium text-gray-700">${shortMonthNames[index]}</span>
+                        <span class="flex-1 text-right text-gray-500 pr-3 text-xs">ใช้ ${formatMoney(amount)}</span>
+                        <span class="w-24 text-right text-sm ${remainColor}">เหลือ ${formatMoney(remain)}</span>
+                    </div>
+                `;
+                breakdownList.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- Data Persistence (Local Storage) ---
+        function saveData() {
+            try {
+                // In a real app, storing images in LocalStorage is bad practice (size limits).
+                // This is just for demonstration purposes.
+                localStorage.setItem('myExpenses', JSON.stringify(expenses));
+            } catch (e) {
+                console.warn('Storage limit reached or error saving data.', e);
+                // If quota exceeded, try saving without images to keep core data
+                if (e.name === 'QuotaExceededError') {
+                     const dataWithoutImages = expenses.map(exp => ({...exp, image: null}));
+                     localStorage.setItem('myExpenses', JSON.stringify(dataWithoutImages));
+                     showMessage('พื้นที่เก็บข้อมูลเต็ม รูปภาพบางส่วนอาจไม่ถูกบันทึก', 'error');
+                }
+            }
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('myExpenses');
+            if (saved) {
+                try {
+                    expenses = JSON.parse(saved);
+                    renderExpenses();
+                    updateDashboard();
+                } catch (e) {
+                    console.error('Error parsing data', e);
+                }
+            } else {
+                // Initialize dashboard even if no data
+                updateDashboard();
+            }
+        }
+
+        // --- Global functions for inline HTML handlers ---
+        
+        window.toggleYearlyDetail = function() {
+            const panel = document.getElementById('yearlyDetailPanel');
+            const icon = document.getElementById('yearlyToggleIcon');
+            
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                panel.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        window.deleteExpense = function(id) {
+            // Confirm dialog substitute
+            if(confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
+                expenses = expenses.filter(exp => exp.id !== id);
+                saveData();
+                renderExpenses();
+                updateDashboard();
+            }
+        }
+
+        // --- Global functions for inline HTML handlers ---
+        
+        window.deleteExpense = function(id) {
+            // Confirm dialog substitute
+            if(confirm('คุณต้องการลบรายการนี้ใช่หรือไม่?')) {
+                expenses = expenses.filter(exp => exp.id !== id);
+                saveData();
+                renderExpenses();
+                updateTotal();
+            }
+        }
+
+        window.viewImage = function(id) {
+            const expense = expenses.find(exp => exp.id === id);
+            if (expense && expense.image) {
+                modalImage.src = expense.image;
+                modal.classList.remove('hidden');
+                // Small delay to allow display:block to apply before animating opacity
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                }, 10);
+            }
+        }
+
+        function closeModal() {
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modalImage.src = '';
+            }, 300); // Wait for transition to finish
+        }
+
+        // Simple custom message toast (replaces alert)
+        function showMessage(msg, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-lg text-white font-medium text-sm transition-all duration-300 translate-y-10 opacity-0 z-50 ${bgColor}`;
+            toast.textContent = msg;
+            
+            document.body.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            // Animate out and remove
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+    });
+</script>
+</body>
+</html>
